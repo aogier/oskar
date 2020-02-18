@@ -1,0 +1,25 @@
+#!/bin/bash
+
+timeout 5 xvfb-run firefox || true
+pulseaudio -D
+
+profile_dir=$(find ~/.mozilla/firefox/ -maxdepth 1 -name '*default-esr')
+
+cat <<EOF > ${profile_dir}/user.js
+user_pref("media.autoplay.default", 0);
+EOF
+
+xvfb-run firefox "$@" &
+
+# wait for audio
+while pacmd list-sink-inputs | head -n1 | grep -q ^0
+do 
+    sleep 0.3
+done
+
+sleep 1
+
+# start encoding
+parec | oggenc -b 192 -o /srv/out.ogg --raw -
+
+
